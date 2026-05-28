@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const APP_URL = "https://postly-rho-jade.vercel.app";
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
 
   if (!code) {
-    return NextResponse.redirect(`${appUrl}/dashboard/settings?error=no_code`);
+    return NextResponse.redirect(`${APP_URL}/dashboard/settings?error=no_code`);
   }
 
   try {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: "https://postly-rho-jade.vercel.app/api/auth/linkedin/callback",
+        redirect_uri: `${APP_URL}/api/auth/linkedin/callback`,
         client_id: process.env.LINKEDIN_CLIENT_ID!,
         client_secret: process.env.LINKEDIN_CLIENT_SECRET!,
       }),
@@ -27,15 +28,20 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenRes.json();
 
     if (!tokenData.access_token) {
-      return NextResponse.redirect(`${appUrl}/dashboard/settings?error=token_failed`);
+      return NextResponse.redirect(`${APP_URL}/dashboard/settings?error=token_failed`);
     }
 
-    // Get LinkedIn profile
-    const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+    // Get LinkedIn profile using v2 API
+    const profileRes = await fetch("https://api.linkedin.com/v2/me", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
-
     const profile = await profileRes.json();
+
+    const emailRes = await fetch("https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const emailData = await emailRes.json();
+    const email = emailData?.elements?.[0]?.["handle~"]?.emailAddress ?? "";
 
     // Save to Supabase
     const supabase = await createClient();
@@ -45,15 +51,15 @@ export async function GET(request: NextRequest) {
       await supabase.from("connected_accounts").upsert({
         user_id: user.id,
         platform: "linkedin",
-        username: profile.email,
-        display_name: profile.name,
-        avatar_url: profile.picture,
+        username: email,
+        display_name: `${profile.localizedFirstName} ${profile.localizedLastName}`,
+        avatar_url: "",
         access_token: tokenData.access_token,
       }, { onConflict: "user_id,platform" });
     }
 
-    return NextResponse.redirect(`${appUrl}/dashboard/settings?success=linkedin`);
+    return NextResponse.redirect(`${APP_URL}/dashboard/settings?success=linkedin`);
   } catch {
-    return NextResponse.redirect(`${appUrl}/dashboard/settings?error=failed`);
+    return NextResponse.redirect(`${APP_URL}/dashboard/settings?error=failed`);
   }
 }
