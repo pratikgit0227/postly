@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,18 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const successPlatform = searchParams.get("success");
+
+  const handleConnect = (platform: Platform) => {
+    if (platform === "linkedin") {
+      window.location.href = "/api/auth/linkedin";
+    } else {
+      alert(`${platformConfig[platform].label} connection coming soon!`);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -23,6 +35,11 @@ export default function SettingsPage() {
       if (user) {
         setEmail(user.email ?? "");
         setFullName(user.user_metadata?.full_name ?? "");
+        const { data: accounts } = await supabase
+          .from("connected_accounts")
+          .select("platform")
+          .eq("user_id", user.id);
+        if (accounts) setConnectedAccounts(accounts.map((a) => a.platform));
       }
     };
     load();
@@ -62,20 +79,30 @@ export default function SettingsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-900 mb-1">Connected Accounts</h2>
           <p className="text-sm text-gray-500 mb-4">Connect your social accounts to start publishing.</p>
+          {successPlatform && (
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg mb-3">
+              <CheckCircle2 className="w-4 h-4" />
+              {successPlatform.charAt(0).toUpperCase() + successPlatform.slice(1)} connected successfully!
+            </div>
+          )}
           <div className="space-y-3">
-            {PLATFORMS.map((platform) => (
-              <div key={platform} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                <PlatformIcon platform={platform} showLabel />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => alert(`OAuth connection for ${platformConfig[platform].label} — add your API keys to enable this.`)}
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Connect
-                </Button>
-              </div>
-            ))}
+            {PLATFORMS.map((platform) => {
+              const isConnected = connectedAccounts.includes(platform);
+              return (
+                <div key={platform} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                  <PlatformIcon platform={platform} showLabel />
+                  {isConnected ? (
+                    <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+                      <CheckCircle2 className="w-4 h-4" /> Connected
+                    </span>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => handleConnect(platform)}>
+                      <Plus className="w-3.5 h-3.5" /> Connect
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
