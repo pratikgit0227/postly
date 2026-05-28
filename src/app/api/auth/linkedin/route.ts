@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 
+const APP_URL = "https://postly-rho-jade.vercel.app";
+const REDIRECT_URI = `${APP_URL}/api/auth/linkedin/callback`;
+
 export async function GET() {
-  const clientId = process.env.LINKEDIN_CLIENT_ID;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/linkedin/callback`;
+  const clientId = process.env.LINKEDIN_CLIENT_ID!;
 
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: clientId!,
-    redirect_uri: redirectUri,
+    client_id: clientId,
+    redirect_uri: REDIRECT_URI,
     scope: "openid profile email w_member_social",
     state: Math.random().toString(36).substring(7),
   });
