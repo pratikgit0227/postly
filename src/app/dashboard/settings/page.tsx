@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Header } from "@/components/layout/Header";
@@ -11,7 +11,7 @@ import { CheckCircle2, Plus } from "lucide-react";
 
 const PLATFORMS: Platform[] = ["twitter", "linkedin", "threads", "bluesky", "mastodon"];
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
@@ -116,5 +116,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsContent />
+    </Suspense>
   );
 }
