@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -11,15 +10,19 @@ import { CheckCircle2, Plus } from "lucide-react";
 
 const PLATFORMS: Platform[] = ["twitter", "linkedin", "threads", "bluesky", "mastodon"];
 
-function SettingsContent() {
+export default function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [connectedAccounts, setConnectedAccounts] = useState<string[]>([]);
+  const [successPlatform, setSuccessPlatform] = useState("");
   const supabase = createClient();
-  const searchParams = useSearchParams();
-  const successPlatform = searchParams.get("success");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSuccessPlatform(params.get("success") ?? "");
+  }, []);
 
   const handleConnect = (platform: Platform) => {
     if (platform === "linkedin") {
@@ -119,10 +122,3 @@ function SettingsContent() {
   );
 }
 
-export default function SettingsPage() {
-  return (
-    <Suspense fallback={null}>
-      <SettingsContent />
-    </Suspense>
-  );
-}
