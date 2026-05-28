@@ -10,7 +10,7 @@ export async function GET() {
     response_type: "code",
     client_id: clientId,
     redirect_uri: REDIRECT_URI,
-    scope: "w_member_social r_liteprofile r_emailaddress",
+    scope: "openid profile email w_member_social",
     state: Math.random().toString(36).substring(7),
   });
 

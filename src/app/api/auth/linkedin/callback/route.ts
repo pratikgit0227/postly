@@ -31,17 +31,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${APP_URL}/dashboard/settings?error=token_failed`);
     }
 
-    // Get LinkedIn profile using v2 API
-    const profileRes = await fetch("https://api.linkedin.com/v2/me", {
+    // Get LinkedIn profile using OpenID userinfo
+    const profileRes = await fetch("https://api.linkedin.com/v2/userinfo", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const profile = await profileRes.json();
-
-    const emailRes = await fetch("https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const emailData = await emailRes.json();
-    const email = emailData?.elements?.[0]?.["handle~"]?.emailAddress ?? "";
 
     // Save to Supabase
     const supabase = await createClient();
@@ -51,9 +45,9 @@ export async function GET(request: NextRequest) {
       await supabase.from("connected_accounts").upsert({
         user_id: user.id,
         platform: "linkedin",
-        username: email,
-        display_name: `${profile.localizedFirstName} ${profile.localizedLastName}`,
-        avatar_url: "",
+        username: profile.email ?? profile.sub,
+        display_name: profile.name ?? "LinkedIn User",
+        avatar_url: profile.picture ?? "",
         access_token: tokenData.access_token,
       }, { onConflict: "user_id,platform" });
     }
